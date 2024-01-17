@@ -43,3 +43,4 @@ mods1 %>%
   ggplot(., aes(x=election, y=estimate))+
   geom_point()+
   facet_grid(~y.level)
+ggsave(filename="Plots/multinomial_coefficients_time.png")
