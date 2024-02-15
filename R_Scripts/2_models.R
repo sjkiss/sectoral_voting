@@ -2,7 +2,7 @@ source("R_Scripts/1_master_file.R")
   # Analysis
 #Check reference category for vote
 ces$vote
-as_factor(ces$vote)
+
 library(nnet)
 ces %>% 
   #Filter out vote ==Other and Green
@@ -25,22 +25,29 @@ ces %>%
   # Do we have sector for those years? 
   filter(election>1974) %>% 
   mutate(model=map(data, function(x) multinom(vote~sector, data=x)), 
-         tidied=map(model, tidy))->mods1
+         model2=map(data, function(x) multinom(vote~sector+male+degree, data=x)),
+         tidied=map(model, tidy), 
+         tidied2=map(model, tidy))->mods1
+
+# Untidied models are best with modelsummary for tables
 
 library(modelsummary)
+library(gt)
 mods1$model
 names(mods1$model)<-c(1979, 1980, 1984, 1988, 1993, 1997, 2000, 2004, 2006, 2008, 2011, 2015, 2019)
+
 modelsummary(mods1$model, 
              shape=term+response~statistic, 
              coef_omit = c("(Intercept)"), 
-             stars=T)
+             stars=T, output="gt") 
+gtsave("Tables/table1.html")
 
 #Visualize raw coefficients
-
+# Tidied models are best for plotting
 mods1 %>% 
   unnest(tidied) %>% 
   filter(term!="(Intercept)") %>% 
   ggplot(., aes(x=election, y=estimate))+
   geom_point()+
-  facet_grid(~y.level)
+  facet_grid(~y.level)+labs(title="Raw multinomial coefficient\nOdds of supporting party v. Cons")
 ggsave(filename="Plots/multinomial_coefficients_time.png")
