@@ -91,7 +91,7 @@ common_vars<-c('male',
                'union_both',
                'region', 'union',
                'degree', 
-               'quebec', 
+               'quebec',
                'age', 
                'religion', 
                'vote', 
@@ -124,3 +124,5 @@ table(ces$ndp)
 #Set Reference Category for vote
 ces$vote<-as_factor(ces$vote)
 ces$vote<-fct_relevel(ces$vote, "Conservative", "Liberal", "NDP", "Bloc")
+
+
