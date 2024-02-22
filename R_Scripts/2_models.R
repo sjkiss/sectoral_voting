@@ -43,8 +43,9 @@ mods1 %>%
   filter(term!="(Intercept)") %>% 
   ggplot(., aes(x=election, y=estimate, col=mode))+
   geom_point()+
+  geom_errorbar(aes(ymin=estimate-(1.96*std.error), ymax=estimate+(1.96*std.error)), width=0)+
   facet_grid(~y.level)+labs(title="Raw multinomial coefficient\nOdds of supporting party v. Cons")
-ggsave(filename="Plots/multinomial_coefficients_time.png")
+ggsave(filename="Plots/multinomial_coefficients_time.png", width=10, height=6)
 # prop.table(table(as_factor(ces19web$vote), ces19web$sector),2)
 # prop.table(table(as_factor(ces19phone$vote), ces19phone$sector),2)
 # Tidied models are best for plotting
@@ -53,5 +54,7 @@ mods1 %>%
   filter(term=="sector") %>% 
   ggplot(., aes(x=election, y=estimate, col=mode))+
   geom_point()+
-  facet_grid(~y.level)+labs(title="Raw multinomial coefficient\nOdds of supporting party v. Cons controlling for degree and gender")
-ggsave(filename="Plots/multinomial_coefficients_time_with_controls.png")
+  facet_grid(~y.level)+
+  geom_errorbar(aes(ymin=estimate-(1.96*std.error), ymax=estimate+(1.96*std.error)), width=0)+
+  labs(title="Raw multinomial coefficient\nOdds of supporting party v. Cons controlling for degree and gender")
+ggsave(filename="Plots/multinomial_coefficients_time_with_controls.png", width=10, height=6)
