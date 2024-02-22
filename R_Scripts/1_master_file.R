@@ -8,10 +8,11 @@ library(modelsummary)
 #devtools::install_github("sjkiss/cesdata2")
 #load cesdata2
 library(cesdata2)
+
 library(tidyverse)
 #Install cesdata2
 #devtools::install_github("sjkiss/github")
-library(cesdata2)
+
 
 #Seprate ces79 and ces80 to two separate files
 ces7980 %>% 

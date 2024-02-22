@@ -11,7 +11,7 @@ ces %>%
   filter(!(election==2015&mode=="Web"))%>%
 group_by(election, mode)%>%
   # and the 2021 survey until we get some kind of sector in there
-  filter(election!=2021) %>% 
+  #filter(election!=2021) %>% 
   #Note becasue we have two years where there are multiple modes (e.g. web and phone)
   #We should probably separate these out a bit. 
   nest(-c(election, mode)) %>% 
@@ -24,16 +24,15 @@ group_by(election, mode)%>%
          tidied2=map(model, tidy))->mods1
 
 # Untidied models are best with modelsummary for tables
-
 library(modelsummary)
 library(gt)
 mods1$model
-names(mods1$model)<-c(1979, 1980, 1984, 1988, 1993, 1997, 2000, 2004, 2006, 2008, 2011, 2015, "2019 Phone", "2019 Web")
+names(mods1$model)<-c(1979, 1980, 1984, 1988, 1993, 1997, 2000, 2004, 2006, 2008, 2011, 2015, "2019 Phone", "2019 Web", 2021)
 
 modelsummary(mods1$model, 
              shape=term+response~statistic, 
              coef_omit = c("(Intercept)"), 
-             stars=T, output="gt") 
+             stars=T, output="gt") %>% 
 gtsave("Tables/table1.html")
 
 #Visualize raw coefficients
@@ -45,4 +44,6 @@ mods1 %>%
   geom_point()+
   facet_grid(~y.level)+labs(title="Raw multinomial coefficient\nOdds of supporting party v. Cons")
 ggsave(filename="Plots/multinomial_coefficients_time.png")
-ces19web$sector
+# prop.table(table(as_factor(ces19web$vote), ces19web$sector),2)
+# prop.table(table(as_factor(ces19phone$vote), ces19phone$sector),2)
+
