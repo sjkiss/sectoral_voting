@@ -58,3 +58,44 @@ mods1 %>%
   geom_errorbar(aes(ymin=estimate-(1.96*std.error), ymax=estimate+(1.96*std.error)), width=0)+
   labs(title="Raw multinomial coefficient\nOdds of supporting party v. Cons controlling for degree and gender")
 ggsave(filename="Plots/multinomial_coefficients_time_with_controls.png", width=10, height=6)
+
+
+# Weight 2019 and 2021
+library(srvyr)
+lookfor(ces19web, "weigh")
+lookfor(ces21, "weight")
+#Create ces19web survey design
+ces19web %>% 
+  #filter in only conservative, liberal, NDP and bq
+  filter(vote>0&vote<5) %>% 
+  #No missing values are permissible on the weight variable
+  filter(!is.na(cps19_weight_general_all)) %>% 
+  #Save as survey design, specifying the weight variable
+as_survey_design(weight=cps19_weight_general_all)->ces19web_des
+
+
+#Create ces21 survey design
+#Repeat as above
+ces21 %>% 
+  filter(!is.na(cps21_weight_general_all)) %>%
+  filter(vote>0&vote<5) %>% 
+  as_survey_design(weight=cps21_weight_general_all)->ces21web_des
+library(survey)
+#install.packages("VGAM")
+#install.packages("svyVGAM")
+library(svyVGAM)
+
+#fit multinomial model
+svy_vglm(as_factor(vote)~sector, 
+         design=ces19web_des, 
+         family=multinomial(refLevel="Conservative"))->mod1
+svy_vglm(as_factor(vote)~sector, 
+         design=ces21web_des, 
+         family=multinomial(refLevel="Conservative"))->mod2
+summary(mod1)
+summary(mod2)
+library(modelsummary)
+
+#Compare with the unweighted
+
+modelsummary(list(mod1,mod2))
