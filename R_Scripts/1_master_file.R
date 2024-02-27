@@ -126,4 +126,84 @@ table(ces$ndp)
 ces$vote<-as_factor(ces$vote)
 ces$vote<-fct_relevel(ces$vote, "Conservative", "Liberal", "NDP", "Bloc")
 
+# Create region2 which is one region variable for all of Canada
+ces %>% 
+  mutate(region2=case_when(
+    region==1 ~ "Atlantic",
+    region==2 ~ "Ontario",
+    region==3 ~"West",
+    quebec==1 ~ "Quebec"
+  ))->ces
+
+# Turn region2 into factor with Quebec as reference case
+ces$region2<-factor(ces$region2, levels=c("Quebec", "Atlantic", "Ontario", "West"))
+levels(ces$region2)
+
+# Female
+ces %>% 
+  mutate(female=case_when(
+    male==1~0,
+    male==0~1
+  ))->ces
+
+# These are party dummies
+# Note that we are setting the People's Party to be conservative
+ces$ndp<-Recode(ces$vote, "3=1; 0:2=0; 4:6=0; NA=NA")
+ces$liberal<-Recode(ces$vote, "1=1; 2:6=0; NA=NA")
+ces$conservative<-Recode(ces$vote, "0:1=0; 2=1; 3:5=0; 6=1; NA=NA")
+ces$bloc<-Recode(ces$vote, "4=1; 0:3=0; 6=0; else=NA")
+ces$green<-Recode(ces$vote, "5=1; 0:4=0; 6=0; else=NA")
+
+#Recode NDP vs Liberals/Right
+ces$ndp_vs_right<-Recode(ces$vote, "3=1; 2=0; else=NA")
+ces$liberal_vs_right<-Recode(ces$vote, "1=1; 2=0; else=NA")
+ces$bloc_vs_right<-Recode(ces$vote, "4=1; 2=0; else=NA")
+ces$left<-Recode(ces$vote, "1=1; 3=1; 5=1; 0=0; 2=0; 4=0; 6=0; else=NA")
+ces$right<-Recode(ces$vote, "2=1; 0=0; 1=0; 3:5=0; 6=1; else=NA")
+
+# Turn religion into factor with None as reference case
+ces$religion2<-Recode(as.factor(ces$religion), "0='None' ; 1='Catholic' ; 2='Protestant' ; 3='Other'", levels=c('None', 'Catholic', 'Protestant', 'Other'))
+levels(ces$religion2)
+table(ces$religion2)
+# Religion dummies
+ces$catholic<-Recode(ces$religion, "1=1; 2:3=0; 0=0; NA=NA")
+ces$no_religion<-Recode(ces$religion, "0=1; 1:3=0; NA=NA")
+
+# Occupation(occupation 3 and 4 include self-employed as a category)
+# Occupation 2 and 4 collapse skilled and Unskilled
+ces$occupation2<-Recode(as.factor(ces$occupation), "4:5='Working_Class' ; 3='Routine_Nonmanual' ; 2='Managers' ; 1='Professionals'", levels=c('Working_Class', 'Managers', 'Professionals', 'Routine_Nonmanual'))
+ces$occupation2<-fct_relevel(ces$occupation2, "Managers", "Professionals", "Routine_Nonmanual", 'Working_Class')
+ces$occupation4<-Recode(as.factor(ces$occupation3), "4:5='Working_Class' ; 3='Routine_Nonmanual' ; 2='Managers' ; 1='Professionals'; 6='Self-Employed'", levels=c('Working_Class', 'Managers', 'Professionals','Self-Employed', 'Routine_Nonmanual'))
+# Working Class variables (3 and 4 include self-employed; 2 and 4 are dichotomous where everyone else is set to 0)
+ces$working_class<-Recode(ces$occupation, "4:5=1; 3=0; 2=0; 1=0; else=NA")
+ces$working_class2<-Recode(ces$occupation, "4:5=1; else=0")
+ces$working_class3<-Recode(ces$occupation3, "4:5=1; 3=0; 2=0; 1=0; 6=0; else=NA")
+ces$working_class4<-Recode(ces$occupation3, "4:5=1; else=0")
+
+# Create decade dummies
+ces$`1960s`<-Recode(ces$election, "1965:1968=1; else=0")
+ces$`1970s`<-Recode(ces$election, "1972:1979=1; else=0")
+ces$`1980s`<-Recode(ces$election, "1980:1988=1; else=0")
+ces$`1990s`<-Recode(ces$election, "1993:1997=1; else=0")
+ces$`2000s`<-Recode(ces$election, "2000:2008=1; else=0")
+ces$`2010s`<-Recode(ces$election, "2011:2019=1; else=0")
+
+# Create Time Dummies
+ces$`1965`<-Recode(ces$election, "1965=1; else=0")
+ces$`1968`<-Recode(ces$election, "1968=1; else=0")
+ces$`1972`<-Recode(ces$election, "1972=1; else=0")
+ces$`1974`<-Recode(ces$election, "1974=1; else=0")
+ces$`1979`<-Recode(ces$election, "1979=1; else=0")
+ces$`1980`<-Recode(ces$election, "1980=1; else=0")
+ces$`1984`<-Recode(ces$election, "1984=1; else=0")
+ces$`1988`<-Recode(ces$election, "1988=1; else=0")
+ces$`1993`<-Recode(ces$election, "1993=1; else=0")
+ces$`1997`<-Recode(ces$election, "1997=1; else=0")
+ces$`2000`<-Recode(ces$election, "2000=1; else=0")
+ces$`2004`<-Recode(ces$election, "2004=1; else=0")
+ces$`2006`<-Recode(ces$election, "2006=1; else=0")
+ces$`2008`<-Recode(ces$election, "2008=1; else=0")
+ces$`2011`<-Recode(ces$election, "2011=1; else=0")
+ces$`2015`<-Recode(ces$election, "2015=1; else=0")
+ces$`2019`<-Recode(ces$election, "2019=1; else=0")
 
