@@ -3,6 +3,7 @@ library(here)
 library(tidyverse)
 library(labelled)
 library(modelsummary)
+library(broom)
 #Install cesdata2
 # Uncomment and install if necessary
 #devtools::install_github("sjkiss/cesdata2")
