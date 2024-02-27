@@ -99,3 +99,18 @@ library(modelsummary)
 #Compare with the unweighted
 
 modelsummary(list(mod1,mod2))
+prop.table(table(ces19web$sector))
+lookfor(ces19web, "sector")
+lookfor(ces19web, "full-time")
+with(ces19web, table(cps19_employment, sector))
+prop.table(table(ces19phone$sector))
+prop.table(table(ces19web$sector, useNA = "ifany"))
+
+ces %>% 
+  group_by(election, mode) %>% 
+  count(sector) %>% 
+mutate(pct=n/sum(n))  %>% 
+filter(sector==1)
+with(ces19phone, prop.table(table(as_factor(vote),sector),2))
+with(ces19web, prop.table(table(as_factor(vote), sector),2))
+prop.table(table(ces19web$cps19_sector))
