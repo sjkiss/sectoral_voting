@@ -8,12 +8,6 @@ theme_update(
 
 library(stringr)
 ces$sector<-as_factor(ces$sector)
-ces %>% 
-  filter(election==2011) %>% 
-  group_by(election, vote) %>% count()
-ces %>% 
-  filter(election==2008) %>% 
-  table(.$bloc)
 ces %>%
   #Filter out vote b==Other and Green
   filter(vote!="Green"&vote!="Other") %>%
@@ -47,6 +41,16 @@ h1_data %>%
                   model2=map(data, function(x) glm(Vote~union_both+female+as_factor(region2)+income_tertile+as_factor(religion),data=x, family="binomial")),
         # model2=map(data, function(x) lm(as.numeric(Vote)~sector+sector_welfare,data=x)),
          model3=map(data, function(x) lm(as.numeric(Vote)~sector+union_both+female+as_factor(region2)+income_tertile+as_factor(religion),data=x, family="binomial")))  ->mod_h1 
+  rename(NDP=ndp, Conservative=conservative, Liberal=liberal, Bloc=bloc) %>% 
+  pivot_longer(cols=c(NDP, Conservative, Liberal, Bloc), names_to=c("Party"), values_to=c("Vote")) %>% 
+  group_by(election, Party) %>% 
+  #select(Party, Vote, sector) %>% 
+  nest() %>% 
+  filter(Party!="Bloc" |election>1989) %>% 
+  mutate(model1=map(data, function(x) lm(as.numeric(Vote)~sector,data=x)),
+         model2=map(data, function(x) lm(as.numeric(Vote)~sector+union_both,data=x)),
+        # model2=map(data, function(x) lm(as.numeric(Vote)~sector+sector_welfare,data=x)),
+         model3=map(data, function(x) lm(as.numeric(Vote)~sector+union_both+as_factor(region2)+as_factor(religion)+non_charter_language+working_class+age+female,data=x)))  ->mod_h1 
 
 mod_h1 %>% 
   mutate(Name=paste(election, Party, sep=" ")) %>% 
