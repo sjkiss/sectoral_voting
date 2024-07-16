@@ -120,6 +120,7 @@ glimpse(ces)
 #### WE DID A LOT OF THIS IN THE PREVIOUS 1_MASTER FILE
 
 # Note that we are setting the People's Party to be conservative
+library(car)
 ces$ndp<-Recode(ces$vote, "3=1; 0:2=0; 4:6=0; NA=NA")
 ces$liberal<-Recode(ces$vote, "1=1; 2:6=0; NA=NA")
 ces$conservative<-Recode(ces$vote, "0:1=0; 2=1; 3:5=0; 6=1; NA=NA")
@@ -137,7 +138,7 @@ ces$liberal_vs_right<-Recode(ces$vote, "1=1; 2=0; else=NA")
 ces$bloc_vs_right<-Recode(ces$vote, "4=1; 2=0; else=NA")
 ces$left<-Recode(ces$vote, "1=1; 3=1; 5=1; 0=0; 2=0; 4=0; 6=0; else=NA")
 ces$right<-Recode(ces$vote, "2=1; 0=0; 1=0; 3:5=0; 6=1; else=NA")
-
+ces$vote<-as_factor(ces$vote)
 # Create region2 which is one region variable for all of Canada
 ces %>% 
   mutate(region2=case_when(
@@ -175,13 +176,14 @@ ces$no_religion<-Recode(ces$religion, "0=1; 1:3=0; NA=NA")
 # Occupation(occupation 3 and 4 include self-employed as a category)
 # Occupation 2 and 4 collapse skilled and Unskilled
 ces$occupation2<-Recode(as.factor(ces$occupation), "4:5='Working_Class' ; 3='Routine_Nonmanual' ; 2='Managers' ; 1='Professionals'", levels=c('Working_Class', 'Managers', 'Professionals', 'Routine_Nonmanual'))
-ces$occupation2<-fct_relevel(ces$occupation2, "Managers", "Professionals", "Routine_Nonmanual", 'Working_Class')
+ces$occupation2<-fct_relevel(ces$occupation2, 'Working_Class',"Routine_Nonmanual","Professionals", "Managers" )
 ces$occupation4<-Recode(as.factor(ces$occupation3), "4:5='Working_Class' ; 3='Routine_Nonmanual' ; 2='Managers' ; 1='Professionals'; 6='Self-Employed'", levels=c('Working_Class', 'Managers', 'Professionals','Self-Employed', 'Routine_Nonmanual'))
 # Working Class variables (3 and 4 include self-employed; 2 and 4 are dichotomous where everyone else is set to 0)
 ces$working_class<-Recode(ces$occupation, "4:5=1; 3=0; 2=0; 1=0; else=NA")
 ces$working_class2<-Recode(ces$occupation, "4:5=1; else=0")
 ces$working_class3<-Recode(ces$occupation3, "4:5=1; 3=0; 2=0; 1=0; 6=0; else=NA")
 ces$working_class4<-Recode(ces$occupation3, "4:5=1; else=0")
+
 
 # Create decade dummies
 ces$`1960s`<-Recode(ces$election, "1965:1968=1; else=0")
@@ -219,3 +221,4 @@ ces %>%
     sector!=1~ "Private Sector"
   ))->ces
 ces$sector_welfare<-factor(ces$sector_welfare, levels=c("Public Sector - Other", "Private Sector", "Public Sector - Welfare"))
+ 

@@ -8,7 +8,9 @@ theme_update(
 
 library(stringr)
 ces$sector<-as_factor(ces$sector)
-
+ces$region2<-relevel(ces$region2, "Ontario")
+table(ces$region2)
+ces$vote
 ces %>%
   #Filter out vote b==Other and Green
   filter(vote!="Green"&vote!="Other") %>%
@@ -37,18 +39,18 @@ ces %>%
 h1_data %>% 
   filter(Party!="Bloc") %>% 
   #Fit the model with only sector and controls
-  mutate(model1=map(data, function(x) glm(Vote~sector+female+as_factor(region2)+income_tertile+degree+as_factor(religion),data=x, family="binomial")),
+  mutate(model1=map(data, function(x) glm(Vote~sector+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=x, family="binomial")),
 #Fit the model with union and controls
-                  model2=map(data, function(x) glm(Vote~union_both+female+as_factor(region2)+income_tertile+degree+as_factor(religion),data=x, family="binomial")),
-         model3=map(data, function(x) glm(Vote~sector+union_both+female+as_factor(region2)+income_tertile+degree+as_factor(religion),data=x, family="binomial")))  ->mod_h1 
+                  model2=map(data, function(x) glm(Vote~union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=x, family="binomial")),
+         model3=map(data, function(x) glm(Vote~sector+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=x, family="binomial")))  ->mod_h1 
 
 h1_data %>% 
   filter(Party=="Bloc"&election> 1992) %>% 
   #Fit the model with only sector and controls
-  mutate(model1=map(data, function(x) glm(Vote~sector+female+income_tertile+as_factor(religion),data=filter(x, quebec==1), family="binomial")),
+  mutate(model1=map(data, function(x) glm(Vote~sector+female+income_tertile+as_factor(religion)+age,data=filter(x, quebec==1), family="binomial")),
          #Fit the model with union and controls
-         model2=map(data, function(x) glm(Vote~union_both+female+income_tertile+as_factor(religion),data=filter(x, quebec==1), family="binomial")),
-         model3=map(data, function(x) glm(Vote~sector+union_both+female+income_tertile+as_factor(religion),data=filter(x, quebec==1), family="binomial")))->mod_h1_qc 
+         model2=map(data, function(x) glm(Vote~union_both+female+income_tertile+as_factor(religion)+age,data=filter(x, quebec==1), family="binomial")),
+         model3=map(data, function(x) glm(Vote~sector+union_both+female+income_tertile+as_factor(religion)+age,data=filter(x, quebec==1), family="binomial")))->mod_h1_qc 
 library(marginaleffects)
 #non-qc models
 mod_h1 %>% 
@@ -98,7 +100,7 @@ mod_h1_qc %>%
   mutate(Model=rep("Sector+Union", nrow(.))) %>% 
   bind_rows(., mod_h1_probs) %>% 
   separate(Name, into=c("Election", "Party"))->mod_h1_probs
-view(mod_h1_probs)
+
 mod_h1_probs %>% 
   #filter(term=="sectorPublic") %>% 
   ggplot(., aes(x=as.numeric(Election), y=estimate, col=Party,size=Model))+
@@ -112,7 +114,42 @@ mod_h1_probs %>%
 ggsave(here("Plots/figure_1_GLM_P_voting_Party.png"), width=10, height=7)
 #### Create models tables
 
-
+library(modelsummary)
+#vec_rename
+#Use this vector to order and rename coefficients in the tables. 
+# 
+vec_rename<-c("sectorPublic"="Public Sector", 
+            "union_both"="Union", 
+            "female"="Gender (Female)", 
+            "degree"="Degree",
+            "as_factor(region2)Atlantic"="Region (Atlantic)",
+            "as_factor(region2)Quebec"="Region (Quebec)",
+            "as_factor(region2)Ontario"="Region (Ontario)",
+            "as_factor(region2)West"="Region (West)", 
+            "income_tertile"="Income (Tertile)",
+            "as_factor(religion)Catholic"="Religion (Catholic)",
+            "as_factor(religion)Protestant"="Religion (Protestant)", 
+            "as_factor(religion)Other"="Religion (Other)", 
+            "(Intercept)"="Intercept")
+mod_h1 %>% 
+  filter(Party=="NDP") %>% 
+  pull(model1, name='election') %>% 
+  modelsummary(., stars=T, coef_map=vec_rename, 
+               fmt=2,  gof_omit=c("AIC|BIC|Log.Lik.|RMSE"),
+               title="GLM model of vote for NDP", 
+               output=here("Tables/A1_ndp.html"))
+mod_h1 %>% 
+  filter(Party=="Liberal") %>% 
+  pull(model1, name='election') %>% 
+  modelsummary(., stars=T, gof_omit=c("AIC|BIC|Log.Lik.|RMSE"),coef_map=vec_rename, fmt=2,  title="GLM model of vote for Liberal", output=here("Tables/A2_liberal.html"))
+mod_h1 %>% 
+  filter(Party=="Conservative") %>% 
+  pull(model1, name='election') %>% 
+  modelsummary(., stars=T,gof_omit=c("AIC|BIC|Log.Lik.|RMSE"), coef_map=vec_rename, fmt=2,  title="GLM model of vote for Conservative", output=here("Tables/A3_conservative.html"))
+mod_h1_qc %>% 
+  #filter(Party=="Conservative") %>% 
+  pull(model1, name='election') %>% 
+  modelsummary(., stars=T,gof_omit=c("AIC|BIC|Log.Lik.|RMSE"), coef_map=vec_rename, fmt=2,  title="GLM model of vote for Conservative", output=here("Tables/A4_bloc.html"))
 
 #### by Decade ####
 ces %>% 
@@ -124,13 +161,19 @@ ces %>%
     election>2010&election<2020~2010
   ))->ces
 ces$Decade<-factor(ces$Decade)
-ces %>% 
-  group_by(election, sector, occupation2) %>% 
-  count() %>% view()
+
 library(marginaleffects)
-modh1_class<-glm(ndp~sector*occupation2+union_both+as.factor(region2)+as_factor(religion)+non_charter_language+age+female+`1968`+`1974`+`1979`+`1980`+`1984`+`1988`+`1993`+`1997`+`2004`+`2006`+`2008`+`2011`+`2015`+`2019`,data=filter(ces, election>1965&election!=1972), family="binomial")
-modh1_class_decade<-glm(ndp~sector*occupation2*Decade+union_both+as.factor(region2)+as_factor(religion)+non_charter_language+age+female,data=filter(ces, election>1965&election!=1972), family="binomial")
-modelsummary(modh1_class, stars=T)
+modh1_class_pooled<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`1968`+`1974`+`1979`+`1980`+`1984`+`1988`+`1993`+`1997`+`2004`+`2006`+`2008`+`2011`+`2015`+`2019`,data=filter(ces, election>1965&election!=1972), family="binomial")
+modh1_class_decade<-glm(ndp~sector*occupation2*Decade+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`1968`+`1974`+`1979`+`1980`+`1984`+`1988`+`1993`+`1997`+`2004`+`2006`+`2008`+`2011`+`2015`+`2019`,data=filter(ces, election>1965&election!=1972), family="binomial")
+modh1_class_1970<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=filter(ces, election>1969&election<1980&election!=1972), family="binomial")
+modh1_class_1980<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=filter(ces, election>1979&election<1990), family="binomial")
+modh1_class_1990<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=filter(ces, election>1990&election<2000), family="binomial")
+modh1_class_2000<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=filter(ces, election>2000&election<2010), family="binomial")
+modh1_class_2010<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=filter(ces, election>2010&election<2020&mode!="Web"), family="binomial")
+modh1_class_decade_list<-list(modh1_class_1970,modh1_class_1980,modh1_class_1990,modh1_class_2000, modh1_class_2010)
+modelsummary(modh1_class_decade_list, stars=T)
+modelsummary(modh1_class_decade, stars=T)
+modelsummary(modh1_class_decade, stars=T)
 table(ces$Decade)
 summary(modh1_class)
 plot_predictions(modh1_class,by=c("occupation2", "sector"))+
