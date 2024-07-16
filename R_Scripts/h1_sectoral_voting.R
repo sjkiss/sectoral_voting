@@ -8,12 +8,7 @@ theme_update(
 
 library(stringr)
 ces$sector<-as_factor(ces$sector)
-ces %>% 
-  filter(election==2011) %>% 
-  group_by(election, vote) %>% count()
-ces %>% 
-  filter(election==2008) %>% 
-  table(.$bloc)
+
 ces %>%
   #Filter out vote b==Other and Green
   filter(vote!="Green"&vote!="Other") %>%
@@ -42,49 +37,82 @@ ces %>%
 h1_data %>% 
   filter(Party!="Bloc") %>% 
   #Fit the model with only sector and controls
-  mutate(model1=map(data, function(x) glm(Vote~sector+female+income_tertile+as_factor(religion),data=x, family="binomial")),
+  mutate(model1=map(data, function(x) glm(Vote~sector+female+as_factor(region2)+income_tertile+degree+as_factor(religion),data=x, family="binomial")),
 #Fit the model with union and controls
-                  model2=map(data, function(x) glm(Vote~union_both+female+as_factor(region2)+income_tertile+as_factor(religion),data=x, family="binomial")),
-        # model2=map(data, function(x) lm(as.numeric(Vote)~sector+sector_welfare,data=x)),
-         model3=map(data, function(x) lm(as.numeric(Vote)~sector+union_both+female+as_factor(region2)+income_tertile+as_factor(religion),data=x, family="binomial")))  ->mod_h1 
+                  model2=map(data, function(x) glm(Vote~union_both+female+as_factor(region2)+income_tertile+degree+as_factor(religion),data=x, family="binomial")),
+         model3=map(data, function(x) glm(Vote~sector+union_both+female+as_factor(region2)+income_tertile+degree+as_factor(religion),data=x, family="binomial")))  ->mod_h1 
 
+h1_data %>% 
+  filter(Party=="Bloc"&election> 1992) %>% 
+  #Fit the model with only sector and controls
+  mutate(model1=map(data, function(x) glm(Vote~sector+female+income_tertile+as_factor(religion),data=filter(x, quebec==1), family="binomial")),
+         #Fit the model with union and controls
+         model2=map(data, function(x) glm(Vote~union_both+female+income_tertile+as_factor(religion),data=filter(x, quebec==1), family="binomial")),
+         model3=map(data, function(x) glm(Vote~sector+union_both+female+income_tertile+as_factor(religion),data=filter(x, quebec==1), family="binomial")))->mod_h1_qc 
+library(marginaleffects)
+#non-qc models
+mod_h1 %>% 
+  #combine election year and party
+  mutate(Name=paste(election, Party, sep=" ")) %>% 
+  #pick the first model sector only, name with the Name variable
+  pull(model1, name=Name) %>% 
+  #for each generate comparisons delta P voting for each party public to private
+  map(., avg_comparisons, variables=c("sector")) %>% 
+  #Tidy
+  map(., tidy) %>% 
+  #Collapse into list
+  #Name each model from Name
+  bind_rows(., .id="Name") %>% 
+  #create Model variable to distinguish sector from sector with union variable
+  #Store in object
+  mutate(Model=rep("Sector", nrow(.)))->mod_h1_probs
+mod_h1_probs
+#Repeat with non-QC model3
 mod_h1 %>% 
   mutate(Name=paste(election, Party, sep=" ")) %>% 
-  pull(model1, name=Name) %>% 
+  pull(model3, name=Name) %>% 
+  #for each generate comparisons delta P voting for each party public to private
+  map(., avg_comparisons, variables=c("sector")) %>% 
   map(., tidy) %>% 
-  bind_rows(., .id="ID") %>% 
-  mutate(Model=rep("Sector", nrow(.)))->mod_h1_coefs
-mod_h1%>% 
-  mutate(Name=paste(election, Party, sep=" ")) %>% 
-  pull(model2, name=Name) %>% 
-  map(., tidy) %>% 
-  bind_rows(., .id="ID") %>% 
+  bind_rows(., .id="Name") %>% 
   mutate(Model=rep("Sector+Union", nrow(.))) %>% 
-  bind_rows(mod_h1_coefs) %>% 
-  separate(col=ID, into=c("Election", "Party"))->mod_h1_coefs
-mod_h1_coefs
-mod_h1_coefs %>% 
-  filter(term=="sectorPublic") %>% 
+  bind_rows(., mod_h1_probs) ->mod_h1_probs
+#Quebec sector only models
+mod_h1_qc %>% 
+  mutate(Name=paste(election, Party, sep=" ")) %>% 
+  pull(model1, name=Name) %>% 
+  #for each generate comparisons delta P voting for each party public to private
+  map(., avg_comparisons, variables=c("sector")) %>% 
+  map(., tidy) %>% 
+  bind_rows(., .id="Name") %>% 
+  mutate(Model=rep("Sector", nrow(.))) %>% 
+  bind_rows(.,mod_h1_probs)->mod_h1_probs
+#repeat with quebec sector +union
+mod_h1_qc %>% 
+  mutate(Name=paste(election, Party, sep=" ")) %>% 
+  pull(model3, name=Name) %>% 
+  #for each generate comparisons delta P voting for each party public to private
+  map(., avg_comparisons, variables=c("sector")) %>% 
+  map(., tidy) %>% 
+  bind_rows(., .id="Name") %>% 
+  mutate(Model=rep("Sector+Union", nrow(.))) %>% 
+  bind_rows(., mod_h1_probs) %>% 
+  separate(Name, into=c("Election", "Party"))->mod_h1_probs
+view(mod_h1_probs)
+mod_h1_probs %>% 
+  #filter(term=="sectorPublic") %>% 
   ggplot(., aes(x=as.numeric(Election), y=estimate, col=Party,size=Model))+
   geom_point()+
   facet_wrap(~fct_relevel(Party, "Conservative", "Liberal","NDP", "Bloc"),nrow=2, ncol=2)+
   scale_color_manual( values=c("cyan", "darkblue", "darkred", "orange"))+
   guides(col="none")+geom_hline(yintercept=0)+
-  labs(x="Election", y="OLS Coefficient")+geom_smooth(method="loess", aes(linetype=Model),se=F, linewidth=1)+scale_size_manual(values=c(1,3))
-ggsave(here("Plots/figure_1_OLS_logistic_coefficients.png"), width=8, height=7)
+  labs(x="Election", y="P of voting for Party")+
+  geom_smooth(method="loess", aes(linetype=Model),se=F, linewidth=1)+
+  scale_size_manual(values=c(1,3))
+ggsave(here("Plots/figure_1_GLM_P_voting_Party.png"), width=10, height=7)
+#### Create models tables
 
-mod_h1 %>% 
-  mutate(Name=paste(election, Party, sep=" ")) %>% 
-  filter(Party=="NDP") %>% 
-  pull(model3, name=Name) %>% 
-  modelsummary(., stars=T)
-# Missing values analysis
 
-ces %>% 
-  select(sector, union_both, region2, religion, age, female, working_class, election) %>% 
-  group_by(election) %>% 
-  summarise(across(everything(), ~sum(is.na(.)))) %>% 
-  write.csv(file=here("data/missing_values.csv"))
 
 #### by Decade ####
 ces %>% 

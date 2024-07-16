@@ -107,7 +107,7 @@ common_vars<-c('male',
                'market1','market2',
                'turnout', 'mip', 'occupation', 'occupation3', 'education', 'personal_retrospective', 'national_retrospective', 'vote3',
                'efficacy_external', 'efficacy_external2', 'efficacy_internal', 'political_efficacy', 'inequality', 'efficacy_rich', 'promise', 'trust', 'pol_interest', 'foreign',
-               'non_charter_language', 'language', 'employment', 'satdem', 'satdem2', 'turnout', 'party_id', 'postgrad', 'income_tertile', 'income2', 'household', 'enviro', 'ideology', 'income_house', 'enviro_spend', 'mode', 'election')
+               'non_charter_language', 'language', 'employment', 'satdem', 'satdem2', 'turnout', 'party_id', 'postgrad', 'income_tertile', 'income2', 'household', 'enviro', 'ideology', 'income_house', 'enviro_spend', 'mode', 'election', 'sector_welfare')
 
 ces.list %>% 
   map(., select, any_of(common_vars))%>%
@@ -119,13 +119,24 @@ glimpse(ces)
 #### SECTION TO MAKE SOME DICHOTOMOUS VARIABLES 
 #### WE DID A LOT OF THIS IN THE PREVIOUS 1_MASTER FILE
 
-library(car)
-ces$ndp<-car::Recode(ces$vote, "3=1; else=0")
-table(ces$ndp)
+# Note that we are setting the People's Party to be conservative
+ces$ndp<-Recode(ces$vote, "3=1; 0:2=0; 4:6=0; NA=NA")
+ces$liberal<-Recode(ces$vote, "1=1; 2:6=0; NA=NA")
+ces$conservative<-Recode(ces$vote, "0:1=0; 2=1; 3:5=0; 6=1; NA=NA")
+ces$bloc<-Recode(ces$vote, "4=1; 0:3=0; 6=0; else=NA")
+ces %>% 
+  mutate(bloc=case_when(
+    election> 1988& vote==4~1,
+    election> 1988&vote<3~0,
+    election>1988&vote==6~0))->ces
+ces$green<-Recode(ces$vote, "5=1; 0:4=0; 6=0; else=NA")
 
-#Set Reference Category for vote
-ces$vote<-as_factor(ces$vote)
-ces$vote<-fct_relevel(ces$vote, "Conservative", "Liberal", "NDP", "Bloc")
+#Recode NDP vs Liberals/Right
+ces$ndp_vs_right<-Recode(ces$vote, "3=1; 2=0; else=NA")
+ces$liberal_vs_right<-Recode(ces$vote, "1=1; 2=0; else=NA")
+ces$bloc_vs_right<-Recode(ces$vote, "4=1; 2=0; else=NA")
+ces$left<-Recode(ces$vote, "1=1; 3=1; 5=1; 0=0; 2=0; 4=0; 6=0; else=NA")
+ces$right<-Recode(ces$vote, "2=1; 0=0; 1=0; 3:5=0; 6=1; else=NA")
 
 # Create region2 which is one region variable for all of Canada
 ces %>% 
@@ -148,19 +159,10 @@ ces %>%
   ))->ces
 
 # These are party dummies
-# Note that we are setting the People's Party to be conservative
-ces$ndp<-Recode(ces$vote, "3=1; 0:2=0; 4:6=0; NA=NA")
-ces$liberal<-Recode(ces$vote, "1=1; 2:6=0; NA=NA")
-ces$conservative<-Recode(ces$vote, "0:1=0; 2=1; 3:5=0; 6=1; NA=NA")
-ces$bloc<-Recode(ces$vote, "4=1; 0:3=0; 6=0; else=NA")
-ces$green<-Recode(ces$vote, "5=1; 0:4=0; 6=0; else=NA")
 
-#Recode NDP vs Liberals/Right
-ces$ndp_vs_right<-Recode(ces$vote, "3=1; 2=0; else=NA")
-ces$liberal_vs_right<-Recode(ces$vote, "1=1; 2=0; else=NA")
-ces$bloc_vs_right<-Recode(ces$vote, "4=1; 2=0; else=NA")
-ces$left<-Recode(ces$vote, "1=1; 3=1; 5=1; 0=0; 2=0; 4=0; 6=0; else=NA")
-ces$right<-Recode(ces$vote, "2=1; 0=0; 1=0; 3:5=0; 6=1; else=NA")
+#Set Reference Category for vote
+ces$vote<-as_factor(ces$vote)
+ces$vote<-fct_relevel(ces$vote, "Conservative", "Liberal", "NDP", "Bloc")
 
 # Turn religion into factor with None as reference case
 ces$religion2<-Recode(as.factor(ces$religion), "0='None' ; 1='Catholic' ; 2='Protestant' ; 3='Other'", levels=c('None', 'Catholic', 'Protestant', 'Other'))
@@ -208,3 +210,12 @@ ces$`2011`<-Recode(ces$election, "2011=1; else=0")
 ces$`2015`<-Recode(ces$election, "2015=1; else=0")
 ces$`2019`<-Recode(ces$election, "2019=1; else=0")
 
+# Create sector branch
+ces93$sector_welfare
+ces %>% 
+  mutate(sector_welfare=case_when(
+    sector==1 &sector_welfare==1~ "Public Sector - Welfare",
+    sector==1&sector_welfare!=1~"Public Sector - Other",
+    sector!=1~ "Private Sector"
+  ))->ces
+ces$sector_welfare<-factor(ces$sector_welfare, levels=c("Public Sector - Other", "Private Sector", "Public Sector - Welfare"))
