@@ -173,7 +173,7 @@ modh1_class_2010<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2
 modh1_class_decade_list<-list(modh1_class_1970,modh1_class_1980,modh1_class_1990,modh1_class_2000, modh1_class_2010)
 modelsummary(modh1_class_decade_list, stars=T)
 modelsummary(modh1_class_decade, stars=T)
-modelsummary(modh1_class_decade, stars=T)
+modelsummary(modh1_class_pooled, stars=T)
 table(ces$Decade)
 summary(modh1_class)
 plot_predictions(modh1_class,by=c("occupation2", "sector"))+
