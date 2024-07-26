@@ -9,20 +9,13 @@ theme_update(
 library(stringr)
 ces$sector<-as_factor(ces$sector)
 ces$region2<-relevel(ces$region2, "Ontario")
-table(ces$region2)
-ces$vote
+ces %>% 
+  filter(election!=1965&election!=1972&election!=2000&election!=2021)->ces
+ces %>% 
+  filter(mode!="Web")->ces
 ces %>%
   #Filter out vote b==Other and Green
   filter(vote!="Green"&vote!="Other") %>%
-  #Drop the 2015 web survey
-  filter(mode!="Web")%>%
-  # group_by(election, ndp, )%>%
-  # and the 2021 survey until we get some kind of sector in there
-  filter(election!=2021) %>%
-  filter(election!=2000) %>%
-  filter(election!=1965) %>% 
-  filter(election!=1972) %>% 
-  #filter(election>1978) %>% 
   filter(!is.na(vote)) %>% 
   #Rename the dichotomous vote variables
   rename(NDP=ndp, Conservative=conservative, Liberal=liberal, Bloc=bloc) %>% 
@@ -154,40 +147,75 @@ mod_h1_qc %>%
 #### by Decade ####
 ces %>% 
   mutate(Decade=case_when(
-    election>1968&election<1980~1970,
+   # election==1968~1960,
+    election>1967&election<1980~1970,
     election>1979&election<1993~1980,
     election>1988&election<2000~1990,
     election>2000&election<2011~2000,
     election>2010&election<2020~2010
   ))->ces
 ces$Decade<-factor(ces$Decade)
-
+ces %>% 
+  mutate(Period=case_when(
+    # election==1968~1960,
+    election>1967&election<1985~"1968-1984",
+    election>1987&election<2003~"1988-1997",
+    election>2000&election<2020~"2004-2019"))->ces
+ces$Period<-factor(ces$Period, levels=c("1968-1984", "1988-1997", "2004-2019"))
 library(marginaleffects)
-modh1_class_pooled<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`1968`+`1974`+`1979`+`1980`+`1984`+`1988`+`1993`+`1997`+`2004`+`2006`+`2008`+`2011`+`2015`+`2019`,data=filter(ces, election>1965&election!=1972), family="binomial")
-modh1_class_decade<-glm(ndp~sector*occupation2*Decade+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`1968`+`1974`+`1979`+`1980`+`1984`+`1988`+`1993`+`1997`+`2004`+`2006`+`2008`+`2011`+`2015`+`2019`,data=filter(ces, election>1965&election!=1972), family="binomial")
-modh1_class_1970<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=filter(ces, election>1969&election<1980&election!=1972), family="binomial")
-modh1_class_1980<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=filter(ces, election>1979&election<1990), family="binomial")
-modh1_class_1990<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=filter(ces, election>1990&election<2000), family="binomial")
-modh1_class_2000<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=filter(ces, election>2000&election<2010), family="binomial")
-modh1_class_2010<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=filter(ces, election>2010&election<2020&mode!="Web"), family="binomial")
-modh1_class_decade_list<-list(modh1_class_1970,modh1_class_1980,modh1_class_1990,modh1_class_2000, modh1_class_2010)
+table(ces$election)
+table(ces$election)
+modh1_class_pooled<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`1974`+`1979`+`1980`+`1984`+`1988`+`1993`+`1997`+`2004`+`2006`+`2008`+`2011`+`2015`+`2019`,data=ces, family="binomial")
+modh1_class_decade<-glm(ndp~sector*occupation2*Decade+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`1974`+`1979`+`1980`+`1984`+`1988`+`1993`+`1997`+`2004`+`2006`+`2008`+`2011`+`2015`+`2019`,data=ces,family="binomial")
+modh1_class_1960<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age,data=filter(ces, election==1968), family="binomial")
+modh1_class_1970<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`1979`,data=filter(ces, election>1969&election<1980&election!=1972), family="binomial")
+modh1_class_1980<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`1984`+`1988`,data=filter(ces, election>1979&election<1990), family="binomial")
+modh1_class_1990<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`1997`,data=filter(ces, election>1990&election<2000), family="binomial")
+modh1_class_2000<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`2006`+`2008`,data=filter(ces, election>2000&election<2010), family="binomial")
+modh1_class_2010<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`2015`+`2019`,data=filter(ces, election>2010&election<2020&mode!="Web"), family="binomial")
+modh1_class_decade_list<-list(modh1_class_1960,modh1_class_1970,modh1_class_1980,modh1_class_1990,modh1_class_2000, modh1_class_2010)
 modelsummary(modh1_class_decade_list, stars=T)
-modelsummary(modh1_class_decade, stars=T)
+modh1_class_period1<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`1974`+`1979`+`1980`+`1984`,data=filter(ces, Period=="1968-1984"), family="binomial")
+modh1_class_period2<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`1993`+`1997`,data=filter(ces, Period=="1988-1997"), family="binomial")
+modh1_class_period3<-glm(ndp~sector*occupation2+union_both+female+as_factor(region2)+degree+income_tertile+degree+as_factor(religion)+age+`2006`+`2008`+`2011`+`2015`+`2019`,data=filter(ces, Period=="2004-2019"), family="binomial")
+modh1_class_period_list<-list(modh1_class_period1, modh1_class_period2, modh1_class_period3)
+modelsummary(modh1_class_period_list, stars=T)
+summary(modh1_class_period1)
+table(ces$Period, ces$election)
+#modelsummary(modh1_class_decade, stars=T)
+summary(modh1_class_2010)
 modelsummary(modh1_class_pooled, stars=T)
-table(ces$Decade)
-summary(modh1_class)
-plot_predictions(modh1_class,by=c("occupation2", "sector"))+
+#summary(modh1_class_decade)
+avg_predictions(modh1_class_pooled, variables=c("occupation2", "sector")) %>% 
+ggplot(., aes(x=occupation2, y=estimate, ymin=conf.low, ymax=conf.high, col=sector))+geom_pointrange()
+plot_predictions(modh1_class_pooled,by=c("occupation2", "sector"))+
   labs(x="Class", y="P of voting NDP", col="Sector")+
   scale_x_discrete(labels=scales::label_wrap(5))
-
-ggsave(filename=here("Plots/figure_2_vote_vertical.png"), width=10, height=6)
-
+summary(modh1_class_pooled)
+ggsave(filename=here("Plots/figure_2_vote_vertical.png"), width=12, height=6)
+#this plots predicted values using the three-way-interaction between sector and Decade
 plot_predictions(modh1_class_decade,by=c("occupation2", "sector", "Decade"))+
-  labs(x="Class", y="P of voting NDP", col="Sector")+
-  scale_x_discrete(labels=scales::label_wrap(5))+
-  theme(axis.text=element_text(size=10))+ylim(c(0,0.4))
-ggsave(filename=here("Plots/figure_3_vote_vertical_decade.png"), width=12, height=8)
+ labs(x="Class", y="P of voting NDP", col="Sector")+
+ scale_x_discrete(labels=scales::label_wrap(5))+
+theme(axis.text=element_text(size=10))+ylim(c(0,0.4))
+#ggsave(filename=here("Plots/figure_3_vote_vertical_decade.png"), width=12, height=8)
+summary(modh1_class_decade_1990)
+#avg_predictions(modh1_class_1990, variables=c("sector", "occupation2"))
+modh1_class_decade_list %>% 
+  map(., avg_predictions, variables=c("sector", "occupation2")) %>% 
+  set_names(c("1960s","1970s", "1980s", "1990s", "2000s", "2010s")) %>% 
+  bind_rows(., .id="Decade") %>% 
+  ggplot(., aes(x=occupation2, y=estimate, ymin=conf.low, ymax=conf.high, col=sector))+
+  geom_pointrange()+facet_wrap(~Decade, nrow=2)+ylim(c(0,0.4))
 
+modh1_class_period_list %>% 
+  map(., avg_predictions, variables=c("sector", "occupation2")) %>% 
+  set_names(c("1968-1984","1988-1997", "2004-2019")) %>% 
+  bind_rows(., .id="Period") %>% 
+  ggplot(., aes(x=occupation2, y=estimate, ymin=conf.low, ymax=conf.high, col=sector))+
+  geom_pointrange()+facet_wrap(~Period)+labs(x="Class", y="Predicted P Voting NDP")
+  ylim(c(0,0.4))
+ggsave(filename=here("Plots/figure_period.png"), width=12, height=6)
 #### 
 modh1_vote_branch1<-glm(ndp~sector+as.factor(region2)+as_factor(religion)+non_charter_language+age+female+`1968`+`1974`+`1979`+`1980`+`1984`+`1988`+`1993`+`1997`+`2004`+`2006`+`2008`+`2011`+`2015`+`2019`,data=filter(ces, election>1965&election!=1972), family="binomial")
 modh1_vote_branch2<-glm(ndp~sector2+as.factor(region2)+as_factor(religion)+non_charter_language+age+female+`1968`+`1974`+`1979`+`1980`+`1984`+`1988`+`1993`+`1997`+`2004`+`2006`+`2008`+`2011`+`2015`+`2019`,data=filter(ces, election>1965&election!=1972), family="binomial")
